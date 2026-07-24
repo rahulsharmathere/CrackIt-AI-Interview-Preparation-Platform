@@ -43,10 +43,10 @@ const interviewReportJsonSchema = {
             items:{
                 type:"object",
                 properties:{
-                    skills:{type:"string",description:"the skill which the candidate is lacking"},
+                    skill:{type:"string",description:"the skill which the candidate is lacking"},
                     severity:{type:"string",enum: ["low", "medium", "high"],description:"The severity of the skill gap"},
                 },
-                required:["skills","severity"]
+                required:["skill","severity"]
             },
             description:"List of skill gaps in the candidate's profile along with their severity"
         },
