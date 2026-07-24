@@ -11,7 +11,7 @@ const tokenBlacklistModel = require("../models/blacklist.model")
 async function registerUserController(req,res){
     const {username,email,password}=req.body
     if(!username || !email || !password){
-        return res.status(400).jsn({
+        return res.status(400).json({
             message:"Please provide all information"
         })
     }
