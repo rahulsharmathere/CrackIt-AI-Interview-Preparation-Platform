@@ -17,4 +17,13 @@ const interviewRouter = require("./routes/interview.routes")
 app.use("/api/auth",authRouter)
 app.use("/api/interview",interviewRouter)
 
+// global error handler - catches errors from fileFilter, multer limits,
+// and any async controller error Express forwards via next(err)
+app.use((err, req, res, next) => {
+    console.error(err)
+    res.status(err.status || 400).json({
+        message: err.message || "Something went wrong. Please try again."
+    })
+})
+
 module.exports=app 

@@ -70,7 +70,7 @@ const interviewReportJsonSchema = {
             type:"string",description:"The title of the job foer which the interview report is generated"
         }
     },
-    required: ["matchScore", "technicalQuestions", "behavioralQuestions","skillGaps","preparationPlan"]
+    required: ["matchScore", "technicalQuestions", "behavioralQuestions","skillGaps","preparationPlan","title"]
 
 };
 
