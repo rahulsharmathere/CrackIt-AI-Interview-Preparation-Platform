@@ -7,7 +7,9 @@ const upload = multer({
     },
     fileFilter:(req,file,cb)=>{
         if(file.mimetype !== "application/pdf"){
-            return cb(new Error("Only PDF files are supported for the resume upload."))
+            const err = new Error("Only PDF files are supported for the resume upload.")
+            err.statusCode = 400
+            return cb(err)
         }
         cb(null,true)
     }

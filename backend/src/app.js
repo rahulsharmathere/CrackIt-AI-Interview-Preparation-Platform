@@ -21,7 +21,8 @@ app.use("/api/interview",interviewRouter)
 // and any async controller error Express forwards via next(err)
 app.use((err, req, res, next) => {
     console.error(err)
-    res.status(err.status || 400).json({
+    const status = err.statusCode || err.status || 500
+    res.status(status).json({
         message: err.message || "Something went wrong. Please try again."
     })
 })
