@@ -1,6 +1,10 @@
 const { GoogleGenAI } = require("@google/genai")
 const {z}=require("zod")
 const puppeteer = require("puppeteer")
+const questionModel = require("../models/questions.model")
+
+const EMBEDDING_MODEL = "gemini-embedding-001"
+const EMBEDDING_DIMENSIONS = 768
 
 
 
@@ -80,13 +84,78 @@ const ai = new GoogleGenAI({
 })
 
 
+/**
+ * Embeds a search query (e.g. a job description) and retrieves the
+ * top-k most semantically similar questions from the question bank
+ * using MongoDB Atlas Vector Search.
+ *
+ * This is the "R" (Retrieval) in RAG.
+ */
+async function retrieveRelevantQuestions(jobDescription, topK = 8) {
+    // Embed the job description. taskType is RETRIEVAL_QUERY (not RETRIEVAL_DOCUMENT,
+    // which we used during ingestion) since this text is a search query, not stored content.
+    const queryEmbeddingResponse = await ai.models.embedContent({
+        model: EMBEDDING_MODEL,
+        contents: jobDescription,
+        config: {
+            taskType: "RETRIEVAL_QUERY",
+            outputDimensionality: EMBEDDING_DIMENSIONS,
+        },
+    })
+
+    const queryEmbedding = queryEmbeddingResponse.embeddings[0].values
+
+    const results = await questionModel.aggregate([
+        {
+            $vectorSearch: {
+                index: "vector_index",
+                path: "embedding",
+                queryVector: queryEmbedding,
+                numCandidates: 150,
+                limit: topK,
+            },
+        },
+        {
+            $project: {
+                _id: 0,
+                question: 1,
+                category: 1,
+                role: 1,
+                difficulty: 1,
+                score: { $meta: "vectorSearchScore" },
+            },
+        },
+    ])
+
+    return results
+}
+
+
 const interviewReportSchema = z.fromJSONSchema(interviewReportJsonSchema);
 
-async function generateInterviewReport({resume,selfDescription,jobDescription}){    
+async function generateInterviewReport({resume,selfDescription,jobDescription}){
+    // RAG step: retrieve real, relevant questions from our question bank
+    // before asking Gemini to generate the report.
+    const retrievedQuestions = await retrieveRelevantQuestions(jobDescription, 8)
+
+    const questionBankContext = retrievedQuestions
+        .map((q, i) => `${i + 1}. [${q.category}, ${q.difficulty}] ${q.question}`)
+        .join("\n")
+
     const prompt = `Generate an interview report for a candidate with the following details:
                     Resume:${resume},
                     Self description:${selfDescription},
-                    Job Description:${jobDescription}    
+                    Job Description:${jobDescription}
+
+                    Here are real interview questions from our question bank that are most
+                    relevant to this job description (retrieved by semantic similarity):
+                    ${questionBankContext}
+
+                    When generating the technicalQuestions and behavioralQuestions fields,
+                    prefer selecting and adapting questions from the list above where they fit
+                    the candidate's profile and the job description. You may still generate
+                    additional questions not in the list if needed to fully cover the role,
+                    but ground your choices in the provided question bank first.
                     `
 
     const interaction = await ai.interactions.create({
@@ -168,4 +237,4 @@ async function generateResumePdf({resume,selfDescription,jobDescription}){
 }
 
 
-module.exports = {generateInterviewReport,generateResumePdf }
+module.exports = {generateInterviewReport,generateResumePdf,retrieveRelevantQuestions }
