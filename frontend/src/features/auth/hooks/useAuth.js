@@ -1,4 +1,4 @@
-import {useState,useContext,useEffect} from "react"
+import {useContext} from "react"
 import {AuthContext} from "../auth.context.jsx"
 import {login,register,logout,getMe} from "../services/auth.api"
 
@@ -35,10 +35,10 @@ export const useAuth = ()=>{
         setLoading(true)
         try{
             await logout()
-            setUser(null)
         }catch(error){
             console.error("Error logging out:", error)
         } finally {
+            setUser(null)
             setLoading(false)
         }
     }
@@ -54,20 +54,6 @@ export const useAuth = ()=>{
             setLoading(false)
         }
     }
-
-    useEffect(()=>{
-        const getAndSetUser = async()=>{
-            try{
-                const data = await getMe()
-                setUser(data.user)
-            } catch (error) {
-                console.error("Error fetching user data:", error)
-            } finally {
-                setLoading(false)
-            }
-        }
-        getAndSetUser()
-    }, [])
 
     return {user,loading,handleLogin,handleRegister,handleLogout,handleGetMe}
 }
