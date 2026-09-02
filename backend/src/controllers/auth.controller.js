@@ -77,7 +77,7 @@ async function loginUserController(req,res){
         process.env.JWT_SECRET,
         {expiresIn:"1d"}
     )
-    res.cookie("token",token)
+    res.cookie("token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: process.env.NODE_ENV === "production" ? "none" : "lax" })
 
     res.status(200).json({
         message:"User logged in successfully",
@@ -110,16 +110,27 @@ async function logoutUserController(req,res){
 
 
 async function getMeController(req,res){
-    const userId=req.user.id
-    const user=await userModel.findById(userId)
-    res.status(200).json({
-        message:"User details fetched successfully",
-        user:{
-            id:user._id,
-            username:user.username,
-            email:user.email
+    try{
+        const userId=req.user.id
+        const user=await userModel.findById(userId)
+        if(!user){
+            return res.status(404).json({
+                message:"User not found"
+            })
         }
-    })
+        res.status(200).json({
+            message:"User details fetched successfully",
+            user:{
+                id:user._id,
+                username:user.username,
+                email:user.email
+            }
+        })
+    }catch(err){
+        res.status(500).json({
+            message:"Something went wrong while fetching user details"
+        })
+    }
 }
 
 module.exports={
